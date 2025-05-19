@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Find Company Directors</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      background: white;
+      padding: 2rem;
+      margin-top: 5rem;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007BFF;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:disabled {
+      background: #a0cfff;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background: #0056b3;
+    }
+
+    .results {
+      margin-top: 2rem;
+    }
+
+    .director-card {
+      background: #f9f9f9;
+      padding: 1rem;
+      border-left: 4px solid #007BFF;
+      margin-bottom: 1rem;
+      border-radius: 5px;
+    }
+
+    .director-card h4 {
+      margin: 0;
+      color: #333;
+    }
+
+    .director-card p {
+      margin: 0.25rem 0;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .error, .success {
+      text-align: center;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    .error {
+      color: red;
+    }
+
+    .success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Find Directors by CIN</h2>
+    <input type="text" id="cin" placeholder="Enter CIN (e.g., U12345MH2020PTC123456)">
+    <button id="searchBtn" onclick="fetchDirectors()">Search Directors</button>
+
+    <div class="results" id="results"></div>
+    <div class="error" id="error"></div>
+    <div class="success" id="success"></div>
+  </div>
+
+  <script>
+    async function fetchDirectors() {
+      const cinInput = document.getElementById('cin');
+      const cin = cinInput.value.trim();
+      const resultsDiv = document.getElementById('results');
+      const errorDiv = document.getElementById('error');
+      const successDiv = document.getElementById('success');
+      const button = document.getElementById('searchBtn');
+
+      // Clear previous messages
+      resultsDiv.innerHTML = '';
+      errorDiv.textContent = '';
+      successDiv.textContent = '';
+
+      // Basic CIN validation
+      const cinRegex = /^[A-Z]{1}[0-9A-Z]{20}$/i;
+      if (!cinRegex.test(cin)) {
+        errorDiv.textContent = 'Invalid CIN format. CIN must be 21 characters long and alphanumeric.';
+        return;
+      }
+
+      // Disable button during fetch
+      button.disabled = true;
+      button.textContent = 'Searching...';
+
+      try {
+        const res = await fetch(`api/company/get_directors.php?cin=${encodeURIComponent(cin)}`);
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.directors) && data.directors.length > 0) {
+          data.directors.forEach(director => {
+            const card = document.createElement('div');
+            card.className = 'director-card';
+            card.innerHTML = `
+              <h4>${director.name}</h4>
+              <p>Email: ${director.email}</p>
+              <p>Contact: ${director.contact}</p>
+            `;
+            resultsDiv.appendChild(card);
+          });
+          successDiv.textContent = `${data.directors.length} director(s) found.`;
+        } else {
+          errorDiv.textContent = data.message || 'No directors found for this CIN.';
+        }
+      } catch (error) {
+        console.error(error);
+        errorDiv.textContent = 'An error occurred while fetching data.';
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Search Directors';
+      }
+    }
+  </script>
+
+</body>
+</html>
